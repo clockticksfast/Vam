@@ -1031,7 +1031,7 @@ function library:addTab(name)
                     end
 					local buttonText = ""
 					for i,v in pairs(library.flags[args.flag]) do
-						local jig = i ~= #library.flags[args.flag] and "," or ""
+						local jig = i ~= #library.flags[args.flag] and ", " or ""
 						buttonText = buttonText..v..jig
 					end
                     if buttonText == "" then buttonText = "..." end
@@ -1119,7 +1119,7 @@ function library:addTab(name)
                     end)
                 end
                 library.options[args.flag].values = tbl
-                updateValue(table.find(library.options[args.flag].values,library.flags[args.flag]) and library.flags[args.flag] or library.options[args.flag].values[1])
+                --updateValue(table.find(library.options[args.flag].values,library.flags[args.flag]) and library.flags[args.flag] or library.options[args.flag].values[1])
             end
 
             button.MouseButton1Click:Connect(function()
@@ -1140,7 +1140,11 @@ function library:addTab(name)
             library.options[args.flag] = {type = "list",changeState = updateValue,values = args.values,refresh = refresh,skipflag = args.skipflag,oldargs = args}
 
             refresh(args.values)
-            valuetext.Text = args.value or args.multiselect and args.value[1] or 'No arg "value" set'
+            if args.multiselect then
+                valuetext.Text = args.value or args.values[1] or 'No arg "value" set'
+            else
+                updateValue(args.value or args.values[1])
+            end
         end
         function group:addConfigbox(args)
             if not args.flag or not args.values then return warn("⚠️ incorrect arguments ⚠️") end
@@ -1799,9 +1803,13 @@ do
     AutofarmPrioritizeTab:addList({flag = 'AutofarmPrioritizeCommons', text = 'Commons', values = Commons, value = '...', multiselect = true})
     AutofarmPrioritizeTab:addList({flag = 'AutofarmPrioritizeUncommons', text = 'Uncommons', values = Uncommons, value = '...', multiselect = true})
     AutofarmPrioritizeTab:addList({flag = 'AutofarmPrioritizeSpecials', text = 'Specials', values = Specials, value = '...', multiselect = true})
-
-
-
+    local AutofarmIgnoreTab = UtilitiesTab:createGroup('right', 'Autofarm ignores')
+    AutofarmIgnoreTab:addList({flag = 'AutofarmIgnoreCommons', text = 'Commons', values = Commons, value = '...', multiselect = true})
+    AutofarmIgnoreTab:addList({flag = 'AutofarmIgnoreUncommons', text = 'Uncommons', values = Uncommons, value = '...', multiselect = true})
+    AutofarmIgnoreTab:addList({flag = 'AutofarmIgnoreSpecials', text = 'Specials', values = Specials, value = '...', multiselect = true})
+    local AutofarmPlacementTab = UtilitiesTab:createGroup('right', 'Autofarm placement')
+    AutofarmPlacementTab:addList({flag = 'AutofarmPlacementFloor', values = {'Infront', 'Behind', 'Left', 'Right'}, value = 'Infront', text = 'Ground'})
+    AutofarmPlacementTab:addList({flag = 'AutofarmPlacementAir', values = {'Floor', 'Air'}, text = 'Air'})
 
 
     local InterfaceTab = library:addTab('Interface')
@@ -1823,4 +1831,3 @@ do
     ConfigurationsTab:addButton({text = "Save/Override",callback = library.createConfig})
 end
 library:refreshConfigs()
-return library
