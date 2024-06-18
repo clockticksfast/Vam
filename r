@@ -1140,7 +1140,7 @@ function library:addTab(name)
             library.options[args.flag] = {type = "list",changeState = updateValue,values = args.values,refresh = refresh,skipflag = args.skipflag,oldargs = args}
 
             refresh(args.values)
-            updateValue(args.value or not args.multiselect and args.values[1] or "abcdefghijklmnopqrstuwvxyz")
+            valuetext.Text = args.value or args.multiselect and args.value[1] or 'No arg "value" set'
         end
         function group:addConfigbox(args)
             if not args.flag or not args.values then return warn("⚠️ incorrect arguments ⚠️") end
@@ -1728,4 +1728,99 @@ function library:deleteConfig()
     library:refreshConfigs()
 end
 
+
+local Connections = {}
+local Commons = {'Zombie', 'Crawler', 'LongArm', 'HelmetZombie', 'ArmouredZombie', 'HeadlessZombie'}
+local Uncommons = {'Flamer', 'RiotZombie', 'ToxicZombie', 'HeavyArmourZombie', 'Boomer', 'LongerArm', 'ElectricZombie', 'Slasher'}
+local Specials = {'Wraith', 'DrenchWraith', 'Destroyer', 'Lurker', 'Sponger', 'MinerZombie', 'Boss', 'Annihilator', 'Hunter', 'Berserker'}
+do
+    local CombatTab = library:addTab("Combat")
+    local AimbotTab = CombatTab:createGroup('left', 'Aim assist')
+    AimbotTab:addToggle({flag = 'AimbotToggle', text = 'Status'}):addKeybind({flag = 'AimbotKeybind'})
+    AimbotTab:addList({flag = 'AimbotMode', text = 'Mode', values = {'Toggle', 'Hold', 'Always'}, value = 'Hold'})
+    local AimbotSettingsTab = CombatTab:createGroup('left', 'Aim assist settings')
+    AimbotSettingsTab:addList({flag = 'AimbotTarget', text = 'Target mode', values = {'Mouse', 'Player'}, value = 'Mouse'})
+    AimbotSettingsTab:addList({flag = 'AimbotHitpart', text = 'Hitpart', values = {'Head', 'Torso'}, value = 'Head'})
+
+
+
+
+    local AimbotSmoothingTab = CombatTab:createGroup('left', 'Aim assist smoothing')
+    AimbotSmoothingTab:addToggle({flag = 'AimbotSmoothingToggle', text = 'Status'})
+    AimbotSmoothingTab:addSlider({flag = 'AimbotSmoothingAmount', text = 'Amount', max = 0.8, value = 0.18, min = 0, rounding = 3}, '/0.8')
+    AimbotSmoothingTab:addList({flag = 'AimbotSmoothingStyle', text = 'Style', values = {'Linear', 'Sine', 'Elastic'}, value = 'Sine'})
+    local AimbotFovTab = CombatTab:createGroup('center', 'Aim assist FOV')
+    AimbotFovTab:addToggle({flag = 'AimbotFovToggle', text = 'Draw fov'}):addColorpicker({flag = 'AimbotFovColor', text = 'FOV color', color = library.libColor})
+    AimbotFovTab:addSlider({flag = 'AimbotFovRadius', text = 'Radius', max = 300, value = 100, min = 0}, '/300px')
+    AimbotFovTab:addToggle({flag = 'AimbotFovUse', text = 'Use FOV'})
+
+    local MeleeAuraTab = CombatTab:createGroup('right', 'Melee aura')
+    MeleeAuraTab:addToggle({flag = 'MeleeAuraToggle', text = 'Status'})
+    MeleeAuraTab:addList({flag = 'MeleeAuraMode', text = 'Target mode', values = {'Single', 'Multi'}, value = 'Single'})
+
+
+
+    local VisualsTab = library:addTab('Visuals')
+    local EspTab = VisualsTab:createGroup('left', 'Esp')
+    EspTab:addToggle({flag = 'EspToggle', text = 'Status'})
+    local EspColorsTab = VisualsTab:createGroup('left', 'Esp colors')
+    EspColorsTab:addToggle({flag = 'EspCommons', text = 'Commons'}):addColorpicker({flag = 'EspCommonsColor', text = 'Commons color', color = Color3.fromRGB(255, 255, 255)})
+    EspColorsTab:addToggle({flag = 'EspUncommons', text = 'Uncommons'}):addColorpicker({flag = 'EspUncommonsColor', text = 'Uncommons color', color = Color3.fromRGB(17, 146, 86)})
+    EspColorsTab:addToggle({flag = 'EspSpecials', text = 'Specials'}):addColorpicker({flag = 'EspSpecialsColor', text = 'Specials color', color = Color3.fromRGB(168, 93, 93)})
+    local EspSettingsTab = VisualsTab:createGroup('left', 'Esp settings')
+    EspSettingsTab:addToggle({flag = 'EspNames', text = 'Names'})
+    EspSettingsTab:addToggle({flag = 'EspBoxes', text = 'Boxes'})
+    EspSettingsTab:addSlider({flag = 'EspRate', text = 'Refresh rate', max = 1, value = 0.01, min = 0, rounding = 2}, '/1s')
+
+
+    local UtilitiesTab = library:addTab('Utility')
+    local UpgraderTab = UtilitiesTab:createGroup('left', 'Upgrader')
+    UpgraderTab:addConfigbox({flag = 'UpgraderBox', values = {'Waiting for upgrade request'}})
+    UpgraderTab:addButton({text = 'Purchase', callback = function()
+        local Item = game.Players.LocalPlayer.PlayerGui.ScreenGui.ShopFrame.Information.TopFrame.Title.Text
+        local Upgrade = library.flags.UpgraderBox
+        local UpgradeName = string.split(Upgrade, " ")[1]
+        local UpgradeMaxLevel = tonumber(Upgrade:sub(-1))
+        local UpgradeCurrentLevel = tonumber(Upgrade:sub(-3, -3))
+        if UpgradeCurrentLevel < UpgradeMaxLevel then
+            if Item == 'Body Armour' then
+                game.ReplicatedStorage.RemoteEvents.UpgradeStructurePlayer:FireServer('Armour', UpgradeName)
+            else
+                if game.Players.LocalPlayer.Backpack:FindFirstChild(Item) then
+                    game.ReplicatedStorage.RemoteEvents.UpgradeWeapon:FireServer(Item, UpgradeName)
+                end
+            end
+        end
+    end})
+
+    local AutofarmTab = UtilitiesTab:createGroup('right', 'Autofarm')
+    AutofarmTab:addToggle({flag = 'AutofarmToggle', text = 'Status'})
+    local AutofarmPrioritizeTab = UtilitiesTab:createGroup('right', 'Autofarm priorities')
+    AutofarmPrioritizeTab:addList({flag = 'AutofarmPrioritizeCommons', text = 'Commons', values = Commons, value = '...', multiselect = true})
+    AutofarmPrioritizeTab:addList({flag = 'AutofarmPrioritizeUncommons', text = 'Uncommons', values = Uncommons, value = '...', multiselect = true})
+    AutofarmPrioritizeTab:addList({flag = 'AutofarmPrioritizeSpecials', text = 'Specials', values = Specials, value = '...', multiselect = true})
+
+
+
+
+
+    local InterfaceTab = library:addTab('Interface')
+    local SettingsTab = InterfaceTab:createGroup('left', 'Settings')
+    SettingsTab:addButton({text = 'Destroy script', callback = function()
+        for _, Connection in pairs(Connections) do
+            Connection:Disconnect()
+        end
+        game:GetService('CoreGui').HkbLbWscRa7b7jogdSlb:Destroy()
+        cleardrawcache()   
+    end})
+    local ConfigurationsTab = InterfaceTab:createGroup('right', 'Configurations')
+    ConfigurationsTab:addConfigbox({flag = 'ConfigBox',values = {}})
+    ConfigurationsTab:addButton({text = "Load",callback = library.loadConfig})
+    ConfigurationsTab:addButton({text = "Delete",callback = library.deleteConfig})
+
+    ConfigurationsTab:addDivider()
+    ConfigurationsTab:addTextbox({text = "Title",flag = "config_name"})
+    ConfigurationsTab:addButton({text = "Save/Override",callback = library.createConfig})
+end
+library:refreshConfigs()
 return library
